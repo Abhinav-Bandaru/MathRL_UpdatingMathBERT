@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F          #  <- add this
 from transformers import BertTokenizer, BertModel
 
 class MathBERTEncoder(nn.Module):
@@ -18,7 +19,7 @@ class MathBERTEncoder(nn.Module):
             for param in self.model.parameters():
                 param.requires_grad = False
 
-    def encode(self, texts, max_length=512, detach=False):
+    def encode(self, texts, max_length=512, detach=False, normalize=True):
         """
         Encode a list of texts into MathBERT embeddings.
 
@@ -41,7 +42,9 @@ class MathBERTEncoder(nn.Module):
         output = self.model(**encoded_input)
         hidden_states = output.last_hidden_state  # (batch_size, seq_len, hidden_size)
         cls_embeddings = hidden_states[:, 0, :]   # (batch_size, hidden_size)
-
+        if normalize:
+            # safe L2 normalisation: ‖v‖₂ = √(Σ v_i²) ; clamp to avoid 0
+            cls_embeddings = F.normalize(cls_embeddings, p=2, dim=-1, eps=1e-6)
         if detach:
             cls_embeddings = cls_embeddings.detach()
 

@@ -20,8 +20,12 @@ def sample_responses_per_demo(demo_tuples, Q_inf, icl_model, num_samples=1):
         prompt = f"Q: {demo_q}\nA: {demo_a}\n\nQ: {Q_inf}\nA:"
         completions = []
 
-        for _ in range(num_samples):
+        for i in range(num_samples):
             output, _ = icl_model.generate(prompt)
+            # if i == 0:
+            #     print(f"---------------{i}-----------")
+            #     print(prompt)
+            #     print(output)
             completions.append(output)
 
         all_responses.append(completions)

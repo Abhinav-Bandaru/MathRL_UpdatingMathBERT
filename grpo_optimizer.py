@@ -17,14 +17,18 @@ def grpo_step(rewards, logp, q_emb, q_ref, optimizer, beta=0.04):
     logp   : 1-D   tensor  (k,)        – log π(a_t)
     """
     # normalise rewards inside the k-set  → Â_t
-    adv = (rewards - rewards.mean()) / (rewards.std() + 1e-8)   # (k,)
-
+    std = rewards.std() + (1e-4 if rewards.std() < 1e-4 else 0)
+    adv = (rewards - rewards.mean()) / std # (k,)
+    print(adv)
+    print(std)
+    print(logp)
     # shapes must match: both (k,)
-    policy_loss = -(adv.detach() * logp).sum()
+    policy_loss = -(adv.detach() * logp).mean()
 
     # optional KL on the query embedding
-    kl = (q_emb.detach() - q_ref).pow(2).sum()
-    loss = policy_loss + beta * kl
+    # kl = (q_emb.detach() - q_ref).pow(2).sum()
+
+    loss = policy_loss # +  beta * kl
 
     optimizer.zero_grad()
     loss.backward()

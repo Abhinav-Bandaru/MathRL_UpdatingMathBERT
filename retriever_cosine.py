@@ -35,6 +35,10 @@ def retrieve_sample_k_cosine(q_emb: torch.Tensor,
     idx_set : LongTensor (k,)        indices of the k chosen examples
     logp    : FloatTensor (k,)        log πθ(a_t | s_t) for each chosen index
     """
+    # 0. L2-NORMALISE both query and candidates
+    # q_emb    = F.normalize(q_emb,    p=2, dim=-1)          # (D,)  or (B,D)
+    # pool_emb = F.normalize(pool_emb, p=2, dim=-1)          # (N,D)
+    
     # 1. cosine-similarity logits
     logits = (q_emb @ pool_emb.T) / tau    # shape (N,)
 
