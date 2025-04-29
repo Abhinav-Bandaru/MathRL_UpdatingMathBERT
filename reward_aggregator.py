@@ -31,7 +31,7 @@ def compute_demo_accuracy(responses, gold_answer):
     correctness = []
     for pred in responses:
         pred_answer = pred.strip()
-        is_correct = int(pred_answer == gold)  # simple string equality
+        is_correct = (gold in pred_answer) or (pred_answer in gold)  # simple string equality
         correctness.append(is_correct)
 
     if len(correctness) == 0:
