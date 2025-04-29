@@ -64,11 +64,12 @@ class MathBERTEncoder(nn.Module):
             Tensor: shape (len(texts), hidden_dim)
         """
         all_embeddings = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i+batch_size]
-            embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
-            all_embeddings.append(embs)
+        with torch.no_grad():
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i+batch_size]
+                embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
+                all_embeddings.append(embs)
 
-        return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
+            return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
 
 
