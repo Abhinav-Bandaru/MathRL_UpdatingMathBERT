@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 def _call_generate(icl_model, prompt):
     """Thin wrapper so we can pass just one arg to the executor."""
     output = icl_model.generate(prompt)
-    print("OUTPUT: ", output)
+    # print("OUTPUT: ", output)
     # return output[0].answer  # we only need `output`, ignore logprob
     return output[0]
 
