@@ -13,6 +13,9 @@ class MathSolution(BaseModel):
     reasoning: str = Field(..., description="Step-by-step reasoning process to solve the math problem.")
     answer: float = Field(..., description="The final numerical answer.")
 
+class MathSolutionNumberOnly(BaseModel):
+    answer: float = Field(..., description="The final numerical answer.")
+
 class OpenAIICLModel:
     def __init__(self, api_key, model_name="gpt-4.1-nano", temperature=0.0, max_tokens=1024):
         """
@@ -129,7 +132,8 @@ class OpenAIAdvanced:
             temperature=self.temperature,
             logprobs=logprobs,
             system_prompt_included=True,
-            debug=False            # set True to see prompt / response
+            debug=False,            # set True to see prompt / response
+            json_schema=MathSolutionNumberOnly
         )
 
         # `query_llm` returns (text, logprobs) when logprobs=True;
@@ -203,7 +207,7 @@ class OpenAIAdvanced:
             api_params["logprobs"] = logprobs
             api_params["top_logprobs"] = 3
 
-        if return_json:
+        if return_json or json_schema:
             if json_schema is None:
                 api_params["response_format"] = {"type": "json_object"}
                 completion = self.client.chat.completions.create(**api_params)

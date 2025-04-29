@@ -4,7 +4,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def _call_generate(icl_model, prompt):
     """Thin wrapper so we can pass just one arg to the executor."""
-    return icl_model.generate(prompt)[0]   # we only need `output`, ignore logprob
+    output = icl_model.generate(prompt)
+    print("OUTPUT: ", output)
+    # return output[0].answer  # we only need `output`, ignore logprob
+    return output[0]
 
 def sample_responses_per_demo(demo_tuples, Q_inf, icl_model, num_samples=1, parallel=False):
     """
@@ -38,7 +41,8 @@ def sample_responses_per_demo(demo_tuples, Q_inf, icl_model, num_samples=1, para
             else:
                 for _ in range(num_samples):
                     output, _ = icl_model.generate(prompt)
-                    completions.append(output)
+                    print("OUTPUT: ", output)
+                    completions.append(output.answer)
 
             all_responses.append(completions)
             if i == 0:

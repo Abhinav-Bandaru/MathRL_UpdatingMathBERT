@@ -49,3 +49,26 @@ class MathBERTEncoder(nn.Module):
             cls_embeddings = cls_embeddings.detach()
 
         return cls_embeddings  # (batch_size, hidden_size)
+    
+
+    def batched_encode(self, texts, batch_size=16, **kwargs):
+        """
+        Encode a large number of texts in memory-safe batches.
+
+        Args:
+            texts (list[str]): input strings
+            batch_size (int): how many to encode at once
+            kwargs: forwarded to self.encode()
+
+        Returns:
+            Tensor: shape (len(texts), hidden_dim)
+        """
+        all_embeddings = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i+batch_size]
+            embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
+            all_embeddings.append(embs)
+
+        return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
+
+
