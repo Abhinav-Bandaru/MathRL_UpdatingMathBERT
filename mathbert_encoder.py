@@ -70,6 +70,6 @@ class MathBERTEncoder(nn.Module):
                 embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
                 all_embeddings.append(embs)
 
-        return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
+            return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
 
 
