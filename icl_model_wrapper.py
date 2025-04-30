@@ -41,7 +41,7 @@ class OpenAIICLModel:
             mean_logprob (float): Mean log probability of generated tokens (confidence proxy).
         """
         role = "You are an expert mathematician capable of solving diverse, challenging math problems"
-        detailed_instructions = "Solve the following math problem, thinking step-by-step. Please make sure to format your reasoning and the final answer in JSON. Keep your reasoning concise and to the point"
+        detailed_instructions = "Solve the following math problem, thinking step-by-step. Please make sure to format your reasoning and the final answer in JSON. Keep your reasoning concise and to the point. Again, keep your reasoning process to a minimum."
         prompt = {
             "system": f"{role}.\n# Task Description\n{detailed_instructions}\n\nHere are some examples to help you understand the task.\n# Example Solutions\n{example_questions}",
             "user": f"# Solve this problem:\n\"{inference_question}\""
@@ -131,6 +131,8 @@ class OpenAIAdvanced:
             "system": f"{role}.\n# Task Description\n{detailed_instructions}\n\nHere are some examples to help you understand the task.\n# Example Solutions\n{example_questions}",
             "user": f"# Solve this problem:\n\"{inference_question}\""
         }
+        
+        #print(prompt)
 
         response, logs = self.query_llm(
             prompt,
@@ -178,7 +180,7 @@ class OpenAIAdvanced:
                     print(f"Error making API call: {e}")
                 curr_try_num += 1
                 print(curr_try_num >= 3 and (return_json or json_schema))
-                if curr_try_num >= 3 and (return_json or json_schema is not None):
+                if curr_try_num >= 2 and (return_json or json_schema is not None):
                     response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=False, json_schema=None, logprobs=logprobs, system_prompt_included=system_prompt_included, debug=debug)
                     prompt=f"""Turn the following text into a JSON object: {response}"""
                     json_response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=True, json_schema=json_schema, logprobs=logprobs, system_prompt_included=False, debug=debug)

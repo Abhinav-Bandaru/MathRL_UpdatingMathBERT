@@ -28,7 +28,7 @@ def retrieve_top_k_cosine(query_embedding, demo_embeddings, k):
 def retrieve_sample_k_cosine(q_emb: torch.Tensor,
                              pool_emb: torch.Tensor,
                              k: int,
-                             tau: float = 0.07):
+                             tau: float = 0.02):
     """
     Returns
     -------
@@ -44,7 +44,7 @@ def retrieve_sample_k_cosine(q_emb: torch.Tensor,
 
     # 2. differentiable Gumbel-softmax draw (probabilities, not indices)
     #    hard=False keeps it a soft prob vector so gradients flow
-    probs = F.gumbel_softmax(logits, tau=1.0, hard=False)  # shape (N,)
+    probs = F.gumbel_softmax(logits, tau=1, hard=False)  # shape (N,)
 
     # 3. choose the k highest-prob items   (no replacement)
     idx_set = probs.topk(k).indices                     # (k,)

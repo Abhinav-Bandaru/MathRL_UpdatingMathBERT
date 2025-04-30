@@ -13,6 +13,11 @@ class MathBERTEncoder(nn.Module):
         self.model = BertModel.from_pretrained(model_name)
         self.device = device
         self.trainable = trainable
+        # ---- NEW dense layer on top of CLS ----
+        self.hidden_size = self.model.config.hidden_size
+        self.proj_dim    = 128     # same size by default
+
+        self.cls_dense = nn.Linear(self.hidden_size, self.proj_dim).to(device)
         # inside __init__ of MathBERTEncoder
         # hidden_size = self.model.config.hidden_size  # e.g., 768
         # self.pool = Pooling(
@@ -82,6 +87,29 @@ class MathBERTEncoder(nn.Module):
         return cls_embeddings  # (batch_size, hidden_size)
     
 
+    # def encode(self, texts, max_length=512, detach=False, normalize=True):
+    #     """
+    #     Returns: Tensor (batch_size, proj_dim)
+    #     """
+    #     encoded = self.tokenizer(
+    #         texts,
+    #         padding=True,
+    #         truncation=True,
+    #         max_length=max_length,
+    #         return_tensors="pt"
+    #     ).to(self.device)
+
+    #     output         = self.model(**encoded)
+    #     cls_embed      = output.last_hidden_state[:, 0, :]        # (B, H)
+    #     projected      = self.cls_dense(cls_embed)                # (B, proj_dim)
+
+    #     if normalize:
+    #         projected = F.normalize(projected, p=2, dim=-1, eps=1e-6)
+    #     if detach:
+    #         projected = projected.detach()
+
+    #     return projected
+    
     def batched_encode(self, texts, batch_size=16, **kwargs):
         """
         Encode a large number of texts in memory-safe batches.

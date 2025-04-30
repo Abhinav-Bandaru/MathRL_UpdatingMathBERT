@@ -81,7 +81,7 @@ def _format_demo_prompt(demo_q, demo_a_reasoning, demo_a_answer):
     formatted_demo = f"""Question: {demo_q}\nSolution: {{"reasoning": "{demo_a_reasoning}", "answer": {demo_a_answer}}}"""
     return formatted_demo
 
-def _call_generate_batch(demo_q, demo_solution, demo_answer, Q_inf, icl_model):
+def _call_generate_batch(j, demo_q, demo_solution, demo_answer, Q_inf, icl_model):
     """
     Used internally to run a generation call in parallel.
     """
@@ -115,9 +115,9 @@ def sample_responses_per_demo(demo_tuples, Q_inf, icl_model, num_samples=1, para
 
     futures = []
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        for i, (demo_q, demo_solution, demo_ans) in enumerate(demo_tuples):
+        for i, (demo_q, demo_solution, demo_ans, j) in enumerate(demo_tuples):
             for _ in range(num_samples):
-                futures.append(pool.submit(_call_generate_batch, demo_q, demo_solution, demo_ans, Q_inf, icl_model))
+                futures.append(pool.submit(_call_generate_batch, j, demo_q, demo_solution, demo_ans, Q_inf, icl_model))
 
         # Collect responses
         raw_outputs = [f.result() for f in as_completed(futures)]
@@ -133,7 +133,7 @@ def sample_responses_per_demo(demo_tuples, Q_inf, icl_model, num_samples=1, para
 
     # Reconstruct in input order
     all_responses = []
-    demo_questions = [q for q, _, _ in demo_tuples]
+    demo_questions = [q for q, _, _, _ in demo_tuples]
     for dq in demo_questions:
         completions = demo_map[dq]
         all_responses.append(completions)
