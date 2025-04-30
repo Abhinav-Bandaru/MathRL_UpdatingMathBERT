@@ -31,7 +31,7 @@ class OpenAIICLModel:
         self.max_tokens = max_tokens
         self.client = OpenAI(api_key=api_key)
 
-    def generate(self, prompt, logprobs=False):
+    def generate(self, inference_question, example_questions, logprobs=False):
         """
         Args:
             prompt (str): The full ICL prompt.
@@ -40,12 +40,18 @@ class OpenAIICLModel:
             predicted_answer (str): Model's generated output.
             mean_logprob (float): Mean log probability of generated tokens (confidence proxy).
         """
+        role = "You are an expert mathematician capable of solving diverse, challenging math problems"
+        detailed_instructions = "Solve the following math problem, thinking step-by-step. Please make sure to format your reasoning and the final answer in JSON. Keep your reasoning concise and to the point"
+        prompt = {
+            "system": f"{role}.\n# Task Description\n{detailed_instructions}\n\nHere are some examples to help you understand the task.\n# Example Solutions\n{example_questions}",
+            "user": f"# Solve this problem:\n\"{inference_question}\""
+        }
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a Math Expert. Return just the final answer as a number, NOTHING ELSE"},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": prompt['system']},
+                    {"role": "user", "content": prompt['user']}
                 ],
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
@@ -95,7 +101,7 @@ class OpenAIAdvanced:
         api_key: str,
         model_name: str = "gpt-4o-mini",
         temperature: float = 0.0,
-        max_tokens: int = 1024,
+        max_tokens: int = 3600,
     ):
         # keeping the same public attributes as OpenAIICLModel for compatibility
         self.model_name   = model_name
@@ -103,9 +109,10 @@ class OpenAIAdvanced:
         self.max_tokens   = max_tokens
         # api_key accepted only to mirror OpenAIICLModel; ignore / log if needed
         self.api_key      = api_key
+        self.client = OpenAI(api_key=api_key)
 
     # ────────────────────────────────────────────────────────────────────────────
-    def generate(self, prompt: str, logprobs: bool = False):
+    def generate(self, inference_question, example_questions, logprobs: bool = False, debug=False):
         """
         Run the ICL prompt through query_llm / query_gpt.
 
@@ -118,22 +125,23 @@ class OpenAIAdvanced:
             otherwise None.
         """
         # We want the same “math-only” answer style as the first wrapper.
-        system_msg = (
-            "You are a Math Expert. I will provide some helpful examples and their solutions. Then, solve the provided problem step by step."
-        )
-
-        # Build the dict expected by query_llm when system_prompt_included=True
-        prompt_dict = {"system": system_msg, "user": prompt}
+        role = "You are an expert mathematician capable of solving diverse, challenging math problems"
+        detailed_instructions = "Solve the following math problem, thinking step-by-step. Please make sure to format your reasoning and the final answer in JSON. Keep your reasoning concise and to the point"
+        prompt = {
+            "system": f"{role}.\n# Task Description\n{detailed_instructions}\n\nHere are some examples to help you understand the task.\n# Example Solutions\n{example_questions}",
+            "user": f"# Solve this problem:\n\"{inference_question}\""
+        }
 
         response, logs = self.query_llm(
-            prompt_dict,
+            prompt,
             model=self.model_name,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             logprobs=logprobs,
             system_prompt_included=True,
-            debug=False,            # set True to see prompt / response
-            json_schema=MathSolutionNumberOnly
+            return_json=True,
+            debug=debug,            # set True to see prompt / response
+            json_schema=LatexSolution
         )
 
         # `query_llm` returns (text, logprobs) when logprobs=True;
@@ -144,9 +152,9 @@ class OpenAIAdvanced:
         else:
             mean_lp = None
 
-        return response.strip(), mean_lp
+        return response, mean_lp
     
-    def query_llm(self, prompt, max_tokens=1000, temperature=0, top_p=0, max_try_num=10, model="gpt-4o-mini", debug=False, return_json=False, json_schema=None, logprobs=False, system_prompt_included=True, is_hippa=False):
+    def query_llm(self, prompt, max_tokens=1000, temperature=0, top_p=0, max_try_num=10, model="gpt-4.1-nano", debug=False, return_json=False, json_schema=None, logprobs=False, system_prompt_included=True):
         if debug:
             if system_prompt_included:
                 print(f"System prompt: {prompt['system']}")
@@ -154,26 +162,26 @@ class OpenAIAdvanced:
             else:
                 print(prompt)
             print(f"Model: {model}")
-        if is_hippa and ('gpt' not in model and 'o3' not in model):
-            raise ValueError("HIPPA compliance requires GPT models")
+
         curr_try_num = 0
         while curr_try_num < max_try_num:
             try:
                 if 'gpt' in model or 'o3' in model:
-                    response = self.query_gpt(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=return_json, json_schema=json_schema, logprobs=logprobs, system_prompt_included=system_prompt_included, is_hippa=is_hippa, debug=debug)
+                    response = self.query_gpt(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=return_json, json_schema=json_schema, logprobs=logprobs, system_prompt_included=system_prompt_included, debug=debug)
                     if logprobs:
                         return response.choices[0].message.content.strip(), response.choices[0].logprobs
+                    return response, None
             except Exception as e:
                 if 'gpt' in model:
                     print(f"Error making OpenAI API call: {e}")
                 else: 
                     print(f"Error making API call: {e}")
                 curr_try_num += 1
-                time.sleep(1)
-                if curr_try_num >= 3 and return_json:
-                    response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=False, json_schema=json_schema, logprobs=logprobs, system_prompt_included=system_prompt_included, is_hippa=is_hippa, debug=debug)
+                print(curr_try_num >= 3 and (return_json or json_schema))
+                if curr_try_num >= 3 and (return_json or json_schema is not None):
+                    response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=False, json_schema=None, logprobs=logprobs, system_prompt_included=system_prompt_included, debug=debug)
                     prompt=f"""Turn the following text into a JSON object: {response}"""
-                    json_response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=True, json_schema=json_schema, logprobs=logprobs, system_prompt_included=False, is_hippa=is_hippa, debug=debug)
+                    json_response = self.query_llm(prompt, model=model, max_tokens=max_tokens, temperature=temperature, top_p=top_p, return_json=True, json_schema=json_schema, logprobs=logprobs, system_prompt_included=False, debug=debug)
                     print("Turning text into JSON by brute force...")
                     return json_response
         return None
@@ -207,7 +215,7 @@ class OpenAIAdvanced:
             api_params["logprobs"] = logprobs
             api_params["top_logprobs"] = 3
 
-        if return_json or json_schema:
+        if return_json or (json_schema is not None):
             if json_schema is None:
                 api_params["response_format"] = {"type": "json_object"}
                 completion = self.client.chat.completions.create(**api_params)

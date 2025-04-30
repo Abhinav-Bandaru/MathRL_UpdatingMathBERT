@@ -18,9 +18,9 @@ def grpo_step(rewards, logp, q_emb, q_ref, optimizer, beta=0.04):
     """
     # normalise rewards inside the k-set  → Â_t
     std = rewards.std() + (1e-5 if rewards.std() < 1e-5 else 0)
-    print(rewards)
+    print("Rewards: ", rewards)
     adv = (rewards - rewards.mean()) / std # (k,)
-    print(adv)
+    print("Advantages: ", adv)
     # shapes must match: both (k,)
     policy_loss = -(adv.detach() * logp).mean()
 

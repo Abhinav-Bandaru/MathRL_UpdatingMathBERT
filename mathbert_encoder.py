@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F          #  <- add this
 from transformers import BertTokenizer, BertModel
+# from sentence_transformers.models import Pooling
 
 class MathBERTEncoder(nn.Module):
     def __init__(self, model_name="tbs17/MathBERT", device="cuda", trainable=True):
@@ -12,12 +13,42 @@ class MathBERTEncoder(nn.Module):
         self.model = BertModel.from_pretrained(model_name)
         self.device = device
         self.trainable = trainable
-
+        # inside __init__ of MathBERTEncoder
+        # hidden_size = self.model.config.hidden_size  # e.g., 768
+        # self.pool = Pooling(
+        #     hidden_size,
+        #     "weightedmean",
+        #     # pooling_mode_mean_tokens=True,    # enable mean-pooling
+        #     # pooling_mode_cls_token=False,     # disable CLS pooling
+        #     # pooling_mode_max_tokens=False     # disable max-pooling
+        # )
         self.model.to(self.device)
         if not trainable:
             self.model.eval()
             for param in self.model.parameters():
                 param.requires_grad = False
+
+    # def encode(self, texts, max_length=512, detach=False, normalize=True):
+    #     encoded_input = self.tokenizer(
+    #         texts,
+    #         padding=True,
+    #         truncation=True,
+    #         max_length=max_length,
+    #         return_tensors='pt'
+    #     ).to(self.device)
+
+    #     output = self.model(**encoded_input)
+    #     token_embeddings = output.last_hidden_state     # (batch_size, seq_len, hidden_size)
+    #     attention_mask = encoded_input['attention_mask']  # (batch_size, seq_len)
+
+    #     # Use Sentence-Transformers pooling:
+    #     pooled_embeddings = self.pool(token_embeddings, attention_mask)  # (batch_size, hidden_size)
+
+    #     if normalize:
+    #         pooled_embeddings = F.normalize(pooled_embeddings, p=2, dim=-1, eps=1e-6)
+    #     if detach:
+    #         pooled_embeddings = pooled_embeddings.detach()
+    #     return pooled_embeddings
 
     def encode(self, texts, max_length=512, detach=False, normalize=True):
         """
@@ -64,12 +95,11 @@ class MathBERTEncoder(nn.Module):
             Tensor: shape (len(texts), hidden_dim)
         """
         all_embeddings = []
-        with torch.no_grad():
-            for i in range(0, len(texts), batch_size):
-                batch = texts[i:i+batch_size]
-                embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
-                all_embeddings.append(embs)
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i+batch_size]
+            embs = self.encode(batch, **kwargs).cpu()  # ← move to CPU
+            all_embeddings.append(embs)
 
-            return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
+        return torch.cat(all_embeddings, dim=0).to(self.device)  # final tensor back on GPU
 
 

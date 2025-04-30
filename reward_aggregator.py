@@ -1,7 +1,7 @@
 # reward_aggregator.py
 
 import re
-
+import helpers
 def extract_gold_answer(text):
     """
     Extract the final numeric answer from GSM8K-style text.
@@ -26,12 +26,11 @@ def compute_demo_accuracy(responses, gold_answer):
     Returns:
         accuracy (float): mean of correct predictions (0 to 1)
     """
-    gold = extract_gold_answer(gold_answer)
-
+    
     correctness = []
     for pred in responses:
-        pred_answer = pred.strip()
-        is_correct = (gold in pred_answer) or (pred_answer in gold)  # simple string equality
+        pred_answer = str(pred).strip()
+        is_correct, _ = helpers.compare_latex_answers(pred_answer, gold_answer)
         correctness.append(is_correct)
 
     if len(correctness) == 0:
